@@ -53,3 +53,15 @@ export ETHEREUM_RPC_URL=https://...
 forge test
 forge fmt
 ```
+
+## Codex Cloud
+
+Configure the Codex Cloud environment to run:
+
+```bash
+./codex-cloud-setup.sh
+```
+
+The setup script installs the repository's known-good Foundry toolchain, `1.6.0-nightly`, and runs `forge test` during environment provisioning.
+
+Use Codex Cloud for repo setup, editing, and test runs. Keep real `./mint.sh --broadcast ...` execution local because it depends on runtime secrets such as `PRIVATE_KEY` and chain RPC URLs.
