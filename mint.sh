@@ -50,7 +50,7 @@ path = Path(sys.argv[1])
 source = path.read_text()
 
 config_match = re.search(
-    r'config\s*=\s*TokenConfig\s*\(\s*\{\s*name:\s*"(?P<name>[^"]*)"\s*,\s*symbol:\s*"(?P<symbol>[^"]*)"\s*,\s*decimals:\s*(?P<decimals>\d+)\s*,\s*finalOwner:\s*(?P<owner>[^}\n]+?)\s*}\s*\)\s*;',
+    r'config\s*=\s*TokenConfig\s*\(\s*\{\s*name:\s*"(?P<name>[^"]*)"\s*,\s*symbol:\s*"(?P<symbol>[^"]*)"\s*,\s*decimals:\s*(?P<decimals>\d+)\s*,\s*finalOwner:\s*(?P<owner>[^}]+?)\s*}\s*\)\s*;',
     source,
     re.S,
 )
@@ -58,7 +58,7 @@ if not config_match:
     sys.exit("Unable to parse TokenConfig from script/DeployAndDistribute.s.sol")
 
 recipient_matches = re.findall(
-    r'Recipient\s*\(\s*\{\s*to:\s*(?P<to>[^,]+?)\s*,\s*amount:\s*(?P<amount>[^}\n]+?)\s*}\s*\)',
+    r'Recipient\s*\(\s*\{\s*to:\s*(?P<to>[^,]+?)\s*,\s*amount:\s*(?P<amount>[^}]+?)\s*}\s*\)',
     source,
     re.S,
 )
@@ -87,12 +87,15 @@ PY
     die "Unable to parse token preflight data from $SCRIPT_PATH"
   fi
 
-  TOKEN_NAME="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '1p')"
-  TOKEN_SYMBOL="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '2p')"
-  TOKEN_DECIMALS="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '3p')"
-  FINAL_OWNER="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '4p')"
-  RECIPIENT_COUNT="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '5p')"
-  TOTAL_MINT_AMOUNT="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '6p')"
+  mapfile -t preflight_lines <<<"$SCRIPT_PREFLIGHT"
+  [ "${#preflight_lines[@]}" -eq 6 ] || die "Unexpected token preflight data from $SCRIPT_PATH"
+
+  TOKEN_NAME="${preflight_lines[0]}"
+  TOKEN_SYMBOL="${preflight_lines[1]}"
+  TOKEN_DECIMALS="${preflight_lines[2]}"
+  FINAL_OWNER="${preflight_lines[3]}"
+  RECIPIENT_COUNT="${preflight_lines[4]}"
+  TOTAL_MINT_AMOUNT="${preflight_lines[5]}"
 }
 
 while [ "$#" -gt 0 ]; do
