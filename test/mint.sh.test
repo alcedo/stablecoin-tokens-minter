@@ -43,13 +43,13 @@ chmod +x "$TEST1_DIR/mint.sh"
 touch "$TEST1_DIR/script/DeployAndDistribute.s.sol"
 
 cat > "$TEST1_DIR/.env" <<'ENV'
-TOKEN_NAME="Test Token"
-TOKEN_SYMBOL=TST
+TOKEN_NAME="Example Stablecoin"
+TOKEN_SYMBOL=EXUSD
 TOKEN_DECIMALS=18
-OWNER="test test test test test test test test test test test junk"
-RECIPIENT="test test test test test test test test test test test junk"
+OWNER="suspect hour slam symbol mountain mixture fever zoo nature kangaroo enlist expire"
+RECIPIENT="uniform absorb deny slow slot wink canvas rifle ill depend size suspect"
 RECIPIENT_AMOUNT=1000000000000000000000
-RECIPIENT2="test test test test test test test test test test test junk"
+RECIPIENT2="maid physical pair future general awake proof author proof arrive sound dolphin"
 RECIPIENT2_AMOUNT=500000000000000000000
 ENV
 
@@ -57,8 +57,8 @@ output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil 2>&1)"
 
 assert_contains "$output" "Chain alias: anvil"
 assert_contains "$output" "Chain ID: 31337"
-assert_contains "$output" "Token name: Test Token"
-assert_contains "$output" "Token symbol: TST"
+assert_contains "$output" "Token name: Example Stablecoin"
+assert_contains "$output" "Token symbol: EXUSD"
 assert_contains "$output" "Token decimals: 18"
 assert_contains "$output" "Final owner: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
 assert_contains "$output" "Recipient count: 2"
@@ -104,15 +104,15 @@ echo "Test 3 passed: missing .env gives helpful error"
 # ---------------------------------------------------------------------------
 
 cat > "$TEST1_DIR/.env" <<'ENV'
-TOKEN_NAME="Test Token"
-TOKEN_SYMBOL=TST
+TOKEN_NAME="Example Stablecoin"
+TOKEN_SYMBOL=EXUSD
 TOKEN_DECIMALS=18
-OWNER="test test test test test test test test test test test junk"
-RECIPIENT="test test test test test test test test test test test junk"
+OWNER="suspect hour slam symbol mountain mixture fever zoo nature kangaroo enlist expire"
+RECIPIENT="uniform absorb deny slow slot wink canvas rifle ill depend size suspect"
 RECIPIENT_AMOUNT=1000
-RECIPIENT2="test test test test test test test test test test test junk"
+RECIPIENT2="maid physical pair future general awake proof author proof arrive sound dolphin"
 RECIPIENT2_AMOUNT=500
-PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+PRIVATE_KEY=0x75eff23155fe349110fb2d93ad3863e28ce7a0619b3bdd860787991cf665b9e5
 ETHEREUM_RPC_URL=https://fake-rpc.example.com
 ENV
 
