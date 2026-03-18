@@ -12,13 +12,6 @@ echo "mock forge $*"
 MOCK
 chmod +x "$TMPDIR/forge"
 
-# Mock cast — return a deterministic address for any mnemonic
-cat > "$TMPDIR/cast" <<'MOCK'
-#!/usr/bin/env bash
-echo "0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
-MOCK
-chmod +x "$TMPDIR/cast"
-
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -39,18 +32,18 @@ mkdir -p "$TEST1_DIR/config" "$TEST1_DIR/script"
 cp "$REPO_ROOT/mint.sh" "$TEST1_DIR/mint.sh"
 cp "$REPO_ROOT/config/chains.sh" "$TEST1_DIR/config/chains.sh"
 chmod +x "$TEST1_DIR/mint.sh"
-# mint.sh does cd "$SCRIPT_DIR" then runs forge with a relative path — needs the script dir
 touch "$TEST1_DIR/script/DeployAndDistribute.s.sol"
 
 cat > "$TEST1_DIR/.env" <<'ENV'
 TOKEN_NAME="Test Token"
 TOKEN_SYMBOL=TST
 TOKEN_DECIMALS=18
-OWNER="test test test test test test test test test test test junk"
-RECIPIENT="test test test test test test test test test test test junk"
-RECIPIENT_AMOUNT=1000000000000000000000
-RECIPIENT2="test test test test test test test test test test test junk"
-RECIPIENT2_AMOUNT=500000000000000000000
+OWNER_ADDRESS=0x1111111111111111111111111111111111111111
+RECIPIENT_COUNT=2
+RECIPIENT_1_ADDRESS=0x2222222222222222222222222222222222222222
+RECIPIENT_1_AMOUNT=1000000000000000000000
+RECIPIENT_2_ADDRESS=0x3333333333333333333333333333333333333333
+RECIPIENT_2_AMOUNT=500000000000000000000
 ENV
 
 output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil 2>&1)"
@@ -60,7 +53,7 @@ assert_contains "$output" "Chain ID: 31337"
 assert_contains "$output" "Token name: Test Token"
 assert_contains "$output" "Token symbol: TST"
 assert_contains "$output" "Token decimals: 18"
-assert_contains "$output" "Final owner: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
+assert_contains "$output" "Final owner: 0x1111111111111111111111111111111111111111"
 assert_contains "$output" "Recipient count: 2"
 assert_contains "$output" "Total mint amount: 1500000000000000000000"
 assert_contains "$output" "Mode: simulation"
@@ -107,11 +100,12 @@ cat > "$TEST1_DIR/.env" <<'ENV'
 TOKEN_NAME="Test Token"
 TOKEN_SYMBOL=TST
 TOKEN_DECIMALS=18
-OWNER="test test test test test test test test test test test junk"
-RECIPIENT="test test test test test test test test test test test junk"
-RECIPIENT_AMOUNT=1000
-RECIPIENT2="test test test test test test test test test test test junk"
-RECIPIENT2_AMOUNT=500
+OWNER_ADDRESS=0x1111111111111111111111111111111111111111
+RECIPIENT_COUNT=2
+RECIPIENT_1_ADDRESS=0x2222222222222222222222222222222222222222
+RECIPIENT_1_AMOUNT=1000
+RECIPIENT_2_ADDRESS=0x3333333333333333333333333333333333333333
+RECIPIENT_2_AMOUNT=500
 PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 ETHEREUM_RPC_URL=https://fake-rpc.example.com
 ENV
@@ -123,5 +117,29 @@ fi
 assert_contains "$mainnet_output" "Refusing mainnet broadcast without --confirm-mainnet"
 
 echo "Test 4 passed: mainnet broadcast requires --confirm-mainnet"
+
+# ---------------------------------------------------------------------------
+# Test 5: recipient indexing supports more than two allocations
+# ---------------------------------------------------------------------------
+
+cat > "$TEST1_DIR/.env" <<'ENV'
+TOKEN_NAME="Test Token"
+TOKEN_SYMBOL=TST
+TOKEN_DECIMALS=6
+OWNER_ADDRESS=0x1111111111111111111111111111111111111111
+RECIPIENT_COUNT=3
+RECIPIENT_1_ADDRESS=0x2222222222222222222222222222222222222222
+RECIPIENT_1_AMOUNT=1250000
+RECIPIENT_2_ADDRESS=0x3333333333333333333333333333333333333333
+RECIPIENT_2_AMOUNT=2500000
+RECIPIENT_3_ADDRESS=0x4444444444444444444444444444444444444444
+RECIPIENT_3_AMOUNT=625000
+ENV
+
+multi_output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil 2>&1)"
+assert_contains "$multi_output" "Recipient count: 3"
+assert_contains "$multi_output" "Total mint amount: 4375000"
+
+echo "Test 5 passed: dynamic recipient count works"
 
 echo "All mint.sh tests passed"

@@ -45,35 +45,21 @@ abstract contract DeployAndDistributeBase is Script {
         pure
         returns (uint256 totalAmount)
     {
-        if (bytes(tokenConfig.name).length == 0) {
-            revert EmptyTokenName();
-        }
-        if (bytes(tokenConfig.symbol).length == 0) {
-            revert EmptyTokenSymbol();
-        }
-        if (tokenConfig.finalOwner == address(0)) {
-            revert ZeroFinalOwner();
-        }
-        if (recipients.length == 0) {
-            revert EmptyRecipients();
-        }
+        if (bytes(tokenConfig.name).length == 0) revert EmptyTokenName();
+        if (bytes(tokenConfig.symbol).length == 0) revert EmptyTokenSymbol();
+        if (tokenConfig.finalOwner == address(0)) revert ZeroFinalOwner();
+        if (recipients.length == 0) revert EmptyRecipients();
 
         for (uint256 i = 0; i < recipients.length; ++i) {
             Recipient memory recipient = recipients[i];
 
-            if (recipient.to == address(0)) {
-                revert ZeroRecipientAddress(i);
-            }
-            if (recipient.amount == 0) {
-                revert ZeroRecipientAmount(i);
-            }
+            if (recipient.to == address(0)) revert ZeroRecipientAddress(i);
+            if (recipient.amount == 0) revert ZeroRecipientAmount(i);
 
             totalAmount += recipient.amount;
 
             for (uint256 j = i + 1; j < recipients.length; ++j) {
-                if (recipient.to == recipients[j].to) {
-                    revert DuplicateRecipient(recipient.to);
-                }
+                if (recipient.to == recipients[j].to) revert DuplicateRecipient(recipient.to);
             }
         }
     }
@@ -163,36 +149,33 @@ abstract contract DeployAndDistributeBase is Script {
 }
 
 contract DeployAndDistribute is DeployAndDistributeBase {
-    // =========================================================================
-    //  All configuration is read from environment variables.
-    //  Copy .env.example to .env and fill in your values.
-    //  See .env.example for documentation on each variable.
-    // =========================================================================
-
     function _tokenConfig() internal view override returns (TokenConfig memory config) {
-        string memory ownerMnemonic = vm.envString("OWNER");
-        uint256 ownerKey = vm.deriveKey(ownerMnemonic, 0);
-
         config = TokenConfig({
             name: vm.envString("TOKEN_NAME"),
             symbol: vm.envString("TOKEN_SYMBOL"),
             decimals: uint8(vm.envUint("TOKEN_DECIMALS")),
-            finalOwner: vm.addr(ownerKey)
+            finalOwner: vm.envAddress("OWNER_ADDRESS")
         });
     }
 
     function _recipients() internal view override returns (Recipient[] memory recipients) {
-        string memory r1Mnemonic = vm.envString("RECIPIENT");
-        string memory r2Mnemonic = vm.envString("RECIPIENT2");
+        uint256 recipientCount = vm.envUint("RECIPIENT_COUNT");
+        recipients = new Recipient[](recipientCount);
 
-        uint256 r1Key = vm.deriveKey(r1Mnemonic, 0);
-        uint256 r2Key = vm.deriveKey(r2Mnemonic, 0);
+        for (uint256 i = 0; i < recipientCount; ++i) {
+            uint256 index = i + 1;
+            recipients[i] = Recipient({
+                to: vm.envAddress(_recipientAddressKey(index)),
+                amount: vm.envUint(_recipientAmountKey(index))
+            });
+        }
+    }
 
-        uint256 r1Amount = vm.envUint("RECIPIENT_AMOUNT");
-        uint256 r2Amount = vm.envUint("RECIPIENT2_AMOUNT");
+    function _recipientAddressKey(uint256 index) internal pure returns (string memory) {
+        return string.concat("RECIPIENT_", vm.toString(index), "_ADDRESS");
+    }
 
-        recipients = new Recipient[](2);
-        recipients[0] = Recipient({to: vm.addr(r1Key), amount: r1Amount});
-        recipients[1] = Recipient({to: vm.addr(r2Key), amount: r2Amount});
+    function _recipientAmountKey(uint256 index) internal pure returns (string memory) {
+        return string.concat("RECIPIENT_", vm.toString(index), "_AMOUNT");
     }
 }

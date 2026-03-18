@@ -6,6 +6,14 @@ CHAIN_ALIAS=""
 BROADCAST=false
 CONFIRM_MAINNET=false
 
+FINAL_OWNER=""
+RECIPIENT_COUNT=""
+TOTAL_MINT_AMOUNT=""
+TOKEN_NAME=""
+TOKEN_SYMBOL=""
+TOKEN_DECIMALS=""
+
+
 die() {
   echo "Error: $*" >&2
   exit 1
@@ -39,31 +47,69 @@ resolve_rpc_url() {
   return 1
 }
 
-load_script_preflight() {
-  # Load .env file if present (without exporting, just for this shell)
+load_env_file() {
   if [ -f "$SCRIPT_DIR/.env" ]; then
     set -a
     # shellcheck disable=SC1091
     . "$SCRIPT_DIR/.env"
     set +a
   fi
+}
 
-  # Validate required env vars
-  [ -n "${TOKEN_NAME:-}" ]     || die "TOKEN_NAME not set — check your .env file"
-  [ -n "${TOKEN_SYMBOL:-}" ]   || die "TOKEN_SYMBOL not set — check your .env file"
+validate_address() {
+  local value="$1"
+  [[ "$value" =~ ^0x[0-9a-fA-F]{40}$ ]]
+}
+
+sum_integer_lines_with_python() {
+  RECIPIENT_AMOUNTS="$1" python - <<'PY_SUM'
+import os
+amounts = [line for line in os.environ["RECIPIENT_AMOUNTS"].splitlines() if line]
+print(sum(int(amount) for amount in amounts))
+PY_SUM
+}
+
+load_script_preflight() {
+  local recipient_index recipient_address recipient_amount recipient_amounts
+
+  load_env_file
+
+  [ -n "${TOKEN_NAME:-}" ] || die "TOKEN_NAME not set — check your .env file"
+  [ -n "${TOKEN_SYMBOL:-}" ] || die "TOKEN_SYMBOL not set — check your .env file"
   [ -n "${TOKEN_DECIMALS:-}" ] || die "TOKEN_DECIMALS not set — check your .env file"
-  [ -n "${OWNER:-}" ]          || die "OWNER mnemonic not set — check your .env file"
-  [ -n "${RECIPIENT:-}" ]      || die "RECIPIENT mnemonic not set — check your .env file"
-  [ -n "${RECIPIENT_AMOUNT:-}" ]  || die "RECIPIENT_AMOUNT not set — check your .env file"
-  [ -n "${RECIPIENT2:-}" ]     || die "RECIPIENT2 mnemonic not set — check your .env file"
-  [ -n "${RECIPIENT2_AMOUNT:-}" ] || die "RECIPIENT2_AMOUNT not set — check your .env file"
+  [ -n "${OWNER_ADDRESS:-}" ] || die "OWNER_ADDRESS not set — check your .env file"
+  [ -n "${RECIPIENT_COUNT:-}" ] || die "RECIPIENT_COUNT not set — check your .env file"
 
-  # Derive owner address from mnemonic
-  FINAL_OWNER="$(cast wallet address --mnemonic "$OWNER" 2>/dev/null)" \
-    || die "Failed to derive owner address from OWNER mnemonic"
+  validate_address "$OWNER_ADDRESS" || die "OWNER_ADDRESS must be a 0x-prefixed 20-byte address"
+  [[ "$TOKEN_DECIMALS" =~ ^[0-9]+$ ]] || die "TOKEN_DECIMALS must be an integer"
+  [[ "$RECIPIENT_COUNT" =~ ^[0-9]+$ ]] || die "RECIPIENT_COUNT must be an integer"
+  [ "$RECIPIENT_COUNT" -gt 0 ] || die "RECIPIENT_COUNT must be greater than zero"
 
-  RECIPIENT_COUNT=2
-  TOTAL_MINT_AMOUNT=$(echo "$RECIPIENT_AMOUNT + $RECIPIENT2_AMOUNT" | bc)
+  FINAL_OWNER="$OWNER_ADDRESS"
+  recipient_amounts=""
+
+  for recipient_index in $(seq 1 "$RECIPIENT_COUNT"); do
+    recipient_address_var="RECIPIENT_${recipient_index}_ADDRESS"
+    recipient_amount_var="RECIPIENT_${recipient_index}_AMOUNT"
+
+    recipient_address="${!recipient_address_var:-}"
+    recipient_amount="${!recipient_amount_var:-}"
+
+    [ -n "$recipient_address" ] || die "$recipient_address_var not set — check your .env file"
+    [ -n "$recipient_amount" ] || die "$recipient_amount_var not set — check your .env file"
+    validate_address "$recipient_address" || die "$recipient_address_var must be a 0x-prefixed 20-byte address"
+    [[ "$recipient_amount" =~ ^[0-9]+$ ]] || die "$recipient_amount_var must be an integer"
+    [ "$recipient_amount" != "0" ] || die "$recipient_amount_var must be greater than zero"
+
+    if [ -n "$recipient_amounts" ]; then
+      recipient_amounts="$recipient_amounts
+$recipient_amount"
+    else
+      recipient_amounts="$recipient_amount"
+    fi
+  done
+
+  TOTAL_MINT_AMOUNT="$(sum_integer_lines_with_python "$recipient_amounts")"
 }
 
 while [ "$#" -gt 0 ]; do
