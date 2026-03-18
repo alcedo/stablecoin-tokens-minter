@@ -159,13 +159,36 @@ abstract contract DeployAndDistributeBase is Script {
 }
 
 contract DeployAndDistribute is DeployAndDistributeBase {
-    function _tokenConfig() internal pure override returns (TokenConfig memory config) {
-        // Edit these values before running the wrapper or the script directly.
-        config = TokenConfig({name: "Example Stablecoin", symbol: "EXUSD", decimals: 18, finalOwner: address(0)});
+    // =========================================================================
+    //  All configuration is read from environment variables.
+    //  Copy .env.example to .env and fill in your values.
+    //  See .env.example for documentation on each variable.
+    // =========================================================================
+
+    function _tokenConfig() internal view override returns (TokenConfig memory config) {
+        string memory ownerMnemonic = vm.envString("OWNER");
+        uint256 ownerKey = vm.deriveKey(ownerMnemonic, 0);
+
+        config = TokenConfig({
+            name: vm.envString("TOKEN_NAME"),
+            symbol: vm.envString("TOKEN_SYMBOL"),
+            decimals: uint8(vm.envUint("TOKEN_DECIMALS")),
+            finalOwner: vm.addr(ownerKey)
+        });
     }
 
-    function _recipients() internal pure override returns (Recipient[] memory recipients) {
-        // Add recipients before running. Validation intentionally rejects an empty list.
-        recipients = new Recipient[](0);
+    function _recipients() internal view override returns (Recipient[] memory recipients) {
+        string memory r1Mnemonic = vm.envString("RECIPIENT");
+        string memory r2Mnemonic = vm.envString("RECIPIENT2");
+
+        uint256 r1Key = vm.deriveKey(r1Mnemonic, 0);
+        uint256 r2Key = vm.deriveKey(r2Mnemonic, 0);
+
+        uint256 r1Amount = vm.envUint("RECIPIENT_AMOUNT");
+        uint256 r2Amount = vm.envUint("RECIPIENT2_AMOUNT");
+
+        recipients = new Recipient[](2);
+        recipients[0] = Recipient({to: vm.addr(r1Key), amount: r1Amount});
+        recipients[1] = Recipient({to: vm.addr(r2Key), amount: r2Amount});
     }
 }

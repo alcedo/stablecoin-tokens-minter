@@ -3,8 +3,8 @@ set -euo pipefail
 
 FOUNDATION_LINE='export PATH="$HOME/.foundry/bin:$PATH"'
 FOUNDRY_BIN="$HOME/.foundry/bin"
-FOUNDRY_TAG="nightly-a0b89547df41c2ac5c28eb795ec1685927b461c1"
-FOUNDRY_CHANNEL="nightly"
+FOUNDRY_TAG="stable"
+FOUNDRY_CHANNEL="stable"
 
 case "$(uname -s)" in
   Linux)
@@ -52,7 +52,7 @@ fi
 mkdir -p "$FOUNDRY_BIN"
 export PATH="$FOUNDRY_BIN:$PATH"
 
-# Download the exact nightly build already validated for this repository.
+# Download the stable Foundry build.
 curl -fsSL "$FOUNDRY_RELEASE_URL" | tar -xzC "$FOUNDRY_BIN"
 
 "$FOUNDRY_BIN/forge" --version

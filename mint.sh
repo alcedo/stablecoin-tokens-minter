@@ -41,61 +41,30 @@ resolve_rpc_url() {
 }
 
 load_script_preflight() {
-  if ! SCRIPT_PREFLIGHT="$(python3 - "$SCRIPT_PATH" <<'PY'
-import re
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-source = path.read_text()
-
-config_match = re.search(
-    r'config\s*=\s*TokenConfig\s*\(\s*\{\s*name:\s*"(?P<name>[^"]*)"\s*,\s*symbol:\s*"(?P<symbol>[^"]*)"\s*,\s*decimals:\s*(?P<decimals>\d+)\s*,\s*finalOwner:\s*(?P<owner>[^}]+?)\s*}\s*\)\s*;',
-    source,
-    re.S,
-)
-if not config_match:
-    sys.exit("Unable to parse TokenConfig from script/DeployAndDistribute.s.sol")
-
-recipient_matches = re.findall(
-    r'Recipient\s*\(\s*\{\s*to:\s*(?P<to>[^,]+?)\s*,\s*amount:\s*(?P<amount>[^}]+?)\s*}\s*\)',
-    source,
-    re.S,
-)
-
-count = len(recipient_matches)
-total = 0
-for _to, amount_expr in recipient_matches:
-    amount_expr = amount_expr.strip().replace('_', '')
-    ether_match = re.fullmatch(r'(\d+)\s+ether', amount_expr)
-    if ether_match:
-        total += int(ether_match.group(1)) * 10**18
-        continue
-    if re.fullmatch(r'\d+', amount_expr):
-        total += int(amount_expr)
-        continue
-    sys.exit(f"Unable to parse recipient amount expression: {amount_expr}")
-
-print(config_match.group('name'))
-print(config_match.group('symbol'))
-print(config_match.group('decimals'))
-print(config_match.group('owner').strip())
-print(count)
-print(total)
-PY
-)"; then
-    die "Unable to parse token preflight data from $SCRIPT_PATH"
+  # Load .env file if present (without exporting, just for this shell)
+  if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$SCRIPT_DIR/.env"
+    set +a
   fi
 
-  mapfile -t preflight_lines <<<"$SCRIPT_PREFLIGHT"
-  [ "${#preflight_lines[@]}" -eq 6 ] || die "Unexpected token preflight data from $SCRIPT_PATH"
+  # Validate required env vars
+  [ -n "${TOKEN_NAME:-}" ]     || die "TOKEN_NAME not set — check your .env file"
+  [ -n "${TOKEN_SYMBOL:-}" ]   || die "TOKEN_SYMBOL not set — check your .env file"
+  [ -n "${TOKEN_DECIMALS:-}" ] || die "TOKEN_DECIMALS not set — check your .env file"
+  [ -n "${OWNER:-}" ]          || die "OWNER mnemonic not set — check your .env file"
+  [ -n "${RECIPIENT:-}" ]      || die "RECIPIENT mnemonic not set — check your .env file"
+  [ -n "${RECIPIENT_AMOUNT:-}" ]  || die "RECIPIENT_AMOUNT not set — check your .env file"
+  [ -n "${RECIPIENT2:-}" ]     || die "RECIPIENT2 mnemonic not set — check your .env file"
+  [ -n "${RECIPIENT2_AMOUNT:-}" ] || die "RECIPIENT2_AMOUNT not set — check your .env file"
 
-  TOKEN_NAME="${preflight_lines[0]}"
-  TOKEN_SYMBOL="${preflight_lines[1]}"
-  TOKEN_DECIMALS="${preflight_lines[2]}"
-  FINAL_OWNER="${preflight_lines[3]}"
-  RECIPIENT_COUNT="${preflight_lines[4]}"
-  TOTAL_MINT_AMOUNT="${preflight_lines[5]}"
+  # Derive owner address from mnemonic
+  FINAL_OWNER="$(cast wallet address --mnemonic "$OWNER" 2>/dev/null)" \
+    || die "Failed to derive owner address from OWNER mnemonic"
+
+  RECIPIENT_COUNT=2
+  TOTAL_MINT_AMOUNT=$(( RECIPIENT_AMOUNT + RECIPIENT2_AMOUNT ))
 }
 
 while [ "$#" -gt 0 ]; do
