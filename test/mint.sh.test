@@ -5,89 +5,123 @@ REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
+# Mock forge — just echo the command
 cat > "$TMPDIR/forge" <<'MOCK'
 #!/usr/bin/env bash
 echo "mock forge $*"
 MOCK
 chmod +x "$TMPDIR/forge"
 
+# Mock cast — return a deterministic address for any mnemonic
+cat > "$TMPDIR/cast" <<'MOCK'
+#!/usr/bin/env bash
+echo "0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
+MOCK
+chmod +x "$TMPDIR/cast"
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
   if [[ "$haystack" != *"$needle"* ]]; then
-    echo "Expected output to contain: $needle" >&2
+    echo "FAIL — expected output to contain: $needle" >&2
     echo "Actual output:" >&2
     echo "$haystack" >&2
     exit 1
   fi
 }
 
-output="$(PATH="$TMPDIR:$PATH" "$REPO_ROOT/mint.sh" --chain anvil)"
+# ---------------------------------------------------------------------------
+# Test 1: basic simulation with .env
+# ---------------------------------------------------------------------------
+
+TEST1_DIR="$TMPDIR/test1"
+mkdir -p "$TEST1_DIR/config" "$TEST1_DIR/script"
+cp "$REPO_ROOT/mint.sh" "$TEST1_DIR/mint.sh"
+cp "$REPO_ROOT/config/chains.sh" "$TEST1_DIR/config/chains.sh"
+chmod +x "$TEST1_DIR/mint.sh"
+# mint.sh does cd "$SCRIPT_DIR" then runs forge with a relative path — needs the script dir
+touch "$TEST1_DIR/script/DeployAndDistribute.s.sol"
+
+cat > "$TEST1_DIR/.env" <<'ENV'
+TOKEN_NAME="Test Token"
+TOKEN_SYMBOL=TST
+TOKEN_DECIMALS=18
+OWNER="test test test test test test test test test test test junk"
+RECIPIENT="test test test test test test test test test test test junk"
+RECIPIENT_AMOUNT=1000000000000000000000
+RECIPIENT2="test test test test test test test test test test test junk"
+RECIPIENT2_AMOUNT=500000000000000000000
+ENV
+
+output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil 2>&1)"
+
 assert_contains "$output" "Chain alias: anvil"
-assert_contains "$output" "Token name: Example Stablecoin"
-assert_contains "$output" "Token symbol: EXUSD"
+assert_contains "$output" "Chain ID: 31337"
+assert_contains "$output" "Token name: Test Token"
+assert_contains "$output" "Token symbol: TST"
 assert_contains "$output" "Token decimals: 18"
-assert_contains "$output" "Final owner: address(0)"
-assert_contains "$output" "Recipient count: 0"
-assert_contains "$output" "Total mint amount: 0"
+assert_contains "$output" "Final owner: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
+assert_contains "$output" "Recipient count: 2"
+assert_contains "$output" "Total mint amount: 1500000000000000000000"
 assert_contains "$output" "Mode: simulation"
+assert_contains "$output" "No transactions will be sent."
 assert_contains "$output" "mock forge script script/DeployAndDistribute.s.sol:DeployAndDistribute --rpc-url http://127.0.0.1:8545"
 
-TEST_REPO="$TMPDIR/multiline-repo"
-mkdir -p "$TEST_REPO/config" "$TEST_REPO/script"
-cp "$REPO_ROOT/mint.sh" "$TEST_REPO/mint.sh"
-cp "$REPO_ROOT/config/chains.sh" "$TEST_REPO/config/chains.sh"
-chmod +x "$TEST_REPO/mint.sh"
+echo "Test 1 passed: basic simulation"
 
-cat > "$TEST_REPO/script/DeployAndDistribute.s.sol" <<'SOL'
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+# ---------------------------------------------------------------------------
+# Test 2: --broadcast requires PRIVATE_KEY
+# ---------------------------------------------------------------------------
 
-struct TokenConfig {
-    string name;
-    string symbol;
-    uint8 decimals;
-    address finalOwner;
-}
+if broadcast_output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil --broadcast 2>&1)"; then
+  echo "FAIL — expected broadcast without PRIVATE_KEY to fail" >&2
+  exit 1
+fi
+assert_contains "$broadcast_output" "Set PRIVATE_KEY before using --broadcast"
 
-struct Recipient {
-    address to;
-    uint256 amount;
-}
+echo "Test 2 passed: broadcast requires PRIVATE_KEY"
 
-contract DeployAndDistribute {
-    function _tokenConfig() internal pure returns (TokenConfig memory config) {
-        config = TokenConfig({
-            name: "Multiline Stablecoin",
-            symbol: "MLS",
-            decimals: 6,
-            finalOwner:
-                0x000000000000000000000000000000000000dEaD
-        });
-    }
+# ---------------------------------------------------------------------------
+# Test 3: missing .env fails with helpful message
+# ---------------------------------------------------------------------------
 
-    function _recipients() internal pure returns (Recipient[] memory recipients) {
-        recipients = new Recipient[](2);
-        recipients[0] = Recipient({
-            to: 0x0000000000000000000000000000000000000001,
-            amount:
-                10 ether
-        });
-        recipients[1] = Recipient({
-            to: 0x0000000000000000000000000000000000000002,
-            amount:
-                25
-        });
-    }
-}
-SOL
+TEST3_DIR="$TMPDIR/test3"
+mkdir -p "$TEST3_DIR/config"
+cp "$REPO_ROOT/mint.sh" "$TEST3_DIR/mint.sh"
+cp "$REPO_ROOT/config/chains.sh" "$TEST3_DIR/config/chains.sh"
+chmod +x "$TEST3_DIR/mint.sh"
 
-multiline_output="$(PATH="$TMPDIR:$PATH" "$TEST_REPO/mint.sh" --chain anvil)"
-assert_contains "$multiline_output" "Token name: Multiline Stablecoin"
-assert_contains "$multiline_output" "Token symbol: MLS"
-assert_contains "$multiline_output" "Token decimals: 6"
-assert_contains "$multiline_output" "Final owner: 0x000000000000000000000000000000000000dEaD"
-assert_contains "$multiline_output" "Recipient count: 2"
-assert_contains "$multiline_output" "Total mint amount: 10000000000000000025"
+if noenv_output="$(PATH="$TMPDIR:$PATH" "$TEST3_DIR/mint.sh" --chain anvil 2>&1)"; then
+  echo "FAIL — expected missing .env to fail" >&2
+  exit 1
+fi
+assert_contains "$noenv_output" "not set"
 
-echo "mint.sh preflight test passed"
+echo "Test 3 passed: missing .env gives helpful error"
+
+# ---------------------------------------------------------------------------
+# Test 4: mainnet broadcast requires --confirm-mainnet
+# ---------------------------------------------------------------------------
+
+cat > "$TEST1_DIR/.env" <<'ENV'
+TOKEN_NAME="Test Token"
+TOKEN_SYMBOL=TST
+TOKEN_DECIMALS=18
+OWNER="test test test test test test test test test test test junk"
+RECIPIENT="test test test test test test test test test test test junk"
+RECIPIENT_AMOUNT=1000
+RECIPIENT2="test test test test test test test test test test test junk"
+RECIPIENT2_AMOUNT=500
+PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+ETHEREUM_RPC_URL=https://fake-rpc.example.com
+ENV
+
+if mainnet_output="$(PATH="$TMPDIR:$PATH" ETHEREUM_RPC_URL=https://fake-rpc.example.com "$TEST1_DIR/mint.sh" --chain ethereum --broadcast 2>&1)"; then
+  echo "FAIL — expected mainnet broadcast without --confirm-mainnet to fail" >&2
+  exit 1
+fi
+assert_contains "$mainnet_output" "Refusing mainnet broadcast without --confirm-mainnet"
+
+echo "Test 4 passed: mainnet broadcast requires --confirm-mainnet"
+
+echo "All mint.sh tests passed"

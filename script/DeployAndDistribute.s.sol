@@ -89,13 +89,17 @@ abstract contract DeployAndDistributeBase is Script {
     function run() external returns (MintableERC20 token) {
         (TokenConfig memory tokenConfig, Recipient[] memory recipients, uint256 totalAmount) = validate();
 
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        address broadcaster = vm.addr(privateKey);
+        uint256 privateKey = vm.envOr("PRIVATE_KEY", uint256(0));
+        address broadcaster = privateKey != 0 ? vm.addr(privateKey) : address(0);
 
         _logPreflight(tokenConfig, recipients.length, totalAmount, broadcaster);
 
-        vm.startBroadcast(privateKey);
-        token = _deployAndDistribute(tokenConfig, recipients, broadcaster, true);
+        if (privateKey != 0) {
+            vm.startBroadcast(privateKey);
+        } else {
+            vm.startBroadcast();
+        }
+        token = _deployAndDistribute(tokenConfig, recipients, broadcaster != address(0) ? broadcaster : msg.sender, true);
         vm.stopBroadcast();
 
         console2.log("Deployment complete.");

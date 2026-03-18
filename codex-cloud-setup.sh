@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-FOUNDATION_LINE='export PATH="$HOME/.foundry/bin:$PATH"'
+FOUNDRY_LINE='export PATH="$HOME/.foundry/bin:$PATH"'
 FOUNDRY_BIN="$HOME/.foundry/bin"
 FOUNDRY_TAG="stable"
 FOUNDRY_CHANNEL="stable"
@@ -37,14 +37,14 @@ FOUNDRY_RELEASE_URL="https://github.com/foundry-rs/foundry/releases/download/${F
 
 if [ -f "$HOME/.bashrc" ]; then
   if [ -w "$HOME/.bashrc" ]; then
-    if ! grep -qxF "$FOUNDATION_LINE" "$HOME/.bashrc"; then
-      printf '%s\n' "$FOUNDATION_LINE" >> "$HOME/.bashrc"
+    if ! grep -qxF "$FOUNDRY_LINE" "$HOME/.bashrc"; then
+      printf '%s\n' "$FOUNDRY_LINE" >> "$HOME/.bashrc"
     fi
   else
     printf 'Skipping PATH persistence because %s is not writable.\n' "$HOME/.bashrc" >&2
   fi
 elif [ -w "$HOME" ]; then
-  printf '%s\n' "$FOUNDATION_LINE" > "$HOME/.bashrc"
+  printf '%s\n' "$FOUNDRY_LINE" > "$HOME/.bashrc"
 else
   printf 'Skipping PATH persistence because %s is not writable.\n' "$HOME" >&2
 fi

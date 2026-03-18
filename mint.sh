@@ -5,7 +5,6 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 CHAIN_ALIAS=""
 BROADCAST=false
 CONFIRM_MAINNET=false
-SCRIPT_PATH="$SCRIPT_DIR/script/DeployAndDistribute.s.sol"
 
 die() {
   echo "Error: $*" >&2
@@ -64,7 +63,7 @@ load_script_preflight() {
     || die "Failed to derive owner address from OWNER mnemonic"
 
   RECIPIENT_COUNT=2
-  TOTAL_MINT_AMOUNT=$(( RECIPIENT_AMOUNT + RECIPIENT2_AMOUNT ))
+  TOTAL_MINT_AMOUNT=$(echo "$RECIPIENT_AMOUNT + $RECIPIENT2_AMOUNT" | bc)
 }
 
 while [ "$#" -gt 0 ]; do
@@ -130,6 +129,7 @@ else
   echo "No transactions will be sent."
 fi
 
+cd "$SCRIPT_DIR"
 COMMAND=(forge script script/DeployAndDistribute.s.sol:DeployAndDistribute --rpc-url "$RPC_URL")
 if [ "$BROADCAST" = true ]; then
   COMMAND+=(--broadcast)

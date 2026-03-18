@@ -2,15 +2,15 @@
 
 Foundry-based tooling for deploying a mintable ERC20 and distributing tokens to a batch of recipients on selected EVM chains.
 
-## What You Edit
+## Configuration
 
-Update the hardcoded token configuration and recipient list in `script/DeployAndDistribute.s.sol` before running the tool.
+Copy `.env.example` to `.env` and fill in your values:
 
-The scaffold intentionally starts with:
-- `finalOwner = address(0)`
-- an empty recipient list
+```bash
+cp .env.example .env
+```
 
-That makes validation fail until you replace the placeholders with real values.
+The `.env` file controls token metadata, owner/recipient mnemonics, mint amounts, deployer key, and RPC URLs. See `.env.example` for documentation on each variable.
 
 ## Chain Aliases
 
@@ -34,20 +34,16 @@ Simulation:
 Broadcast to a testnet:
 
 ```bash
-export PRIVATE_KEY=0x...
-export SEPOLIA_RPC_URL=https://...
 ./mint.sh --chain sepolia --broadcast
 ```
 
 Broadcast to mainnet:
 
 ```bash
-export PRIVATE_KEY=0x...
-export ETHEREUM_RPC_URL=https://...
 ./mint.sh --chain ethereum --broadcast --confirm-mainnet
 ```
 
-Before invoking Foundry, `mint.sh` now prints a shell-level preflight summary with the selected chain, token metadata, final owner, recipient count, and total mint amount parsed from `script/DeployAndDistribute.s.sol`.
+Before invoking Foundry, `mint.sh` prints a shell-level preflight summary with the selected chain, token metadata, final owner, recipient count, and total mint amount derived from your `.env`.
 
 ## Development
 
@@ -64,6 +60,6 @@ Configure the Codex Cloud environment to run:
 ./codex-cloud-setup.sh
 ```
 
-The setup script installs the repository's pinned Foundry nightly build, which reports `forge 1.6.0-nightly`, and runs `forge test` during environment provisioning.
+The setup script installs the stable Foundry release and runs `forge test` during environment provisioning.
 
 Use Codex Cloud for repo setup, editing, and test runs. Keep real `./mint.sh --broadcast ...` execution local because it depends on runtime secrets such as `PRIVATE_KEY` and chain RPC URLs.
