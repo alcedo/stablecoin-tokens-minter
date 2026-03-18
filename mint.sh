@@ -62,7 +62,7 @@ validate_address() {
 }
 
 load_script_preflight() {
-  local recipient_index recipient_address recipient_amount
+  local recipient_index recipient_address recipient_amount recipient_amounts
 
   load_env_file
 
@@ -78,7 +78,7 @@ load_script_preflight() {
   [ "$RECIPIENT_COUNT" -gt 0 ] || die "RECIPIENT_COUNT must be greater than zero"
 
   FINAL_OWNER="$OWNER_ADDRESS"
-  TOTAL_MINT_AMOUNT=0
+  recipient_amounts=""
 
   for recipient_index in $(seq 1 "$RECIPIENT_COUNT"); do
     recipient_address_var="RECIPIENT_${recipient_index}_ADDRESS"
@@ -93,12 +93,20 @@ load_script_preflight() {
     [[ "$recipient_amount" =~ ^[0-9]+$ ]] || die "$recipient_amount_var must be an integer"
     [ "$recipient_amount" != "0" ] || die "$recipient_amount_var must be greater than zero"
 
-    TOTAL_MINT_AMOUNT="$(TOTAL_MINT_AMOUNT="$TOTAL_MINT_AMOUNT" RECIPIENT_AMOUNT_TO_ADD="$recipient_amount" python - <<'PY_SUM'
+    if [ -n "$recipient_amounts" ]; then
+      recipient_amounts="$recipient_amounts
+$recipient_amount"
+    else
+      recipient_amounts="$recipient_amount"
+    fi
+  done
+
+  TOTAL_MINT_AMOUNT="$(RECIPIENT_AMOUNTS="$recipient_amounts" python - <<'PY_SUM'
 import os
-print(int(os.environ["TOTAL_MINT_AMOUNT"]) + int(os.environ["RECIPIENT_AMOUNT_TO_ADD"]))
+amounts = [line for line in os.environ["RECIPIENT_AMOUNTS"].splitlines() if line]
+print(sum(int(amount) for amount in amounts))
 PY_SUM
 )"
-  done
 }
 
 while [ "$#" -gt 0 ]; do
