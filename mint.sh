@@ -61,6 +61,14 @@ validate_address() {
   [[ "$value" =~ ^0x[0-9a-fA-F]{40}$ ]]
 }
 
+sum_integer_lines_with_python() {
+  RECIPIENT_AMOUNTS="$1" python - <<'PY_SUM'
+import os
+amounts = [line for line in os.environ["RECIPIENT_AMOUNTS"].splitlines() if line]
+print(sum(int(amount) for amount in amounts))
+PY_SUM
+}
+
 load_script_preflight() {
   local recipient_index recipient_address recipient_amount recipient_amounts
 
@@ -101,12 +109,7 @@ $recipient_amount"
     fi
   done
 
-  TOTAL_MINT_AMOUNT="$(RECIPIENT_AMOUNTS="$recipient_amounts" python - <<'PY_SUM'
-import os
-amounts = [line for line in os.environ["RECIPIENT_AMOUNTS"].splitlines() if line]
-print(sum(int(amount) for amount in amounts))
-PY_SUM
-)"
+  TOTAL_MINT_AMOUNT="$(sum_integer_lines_with_python "$recipient_amounts")"
 }
 
 while [ "$#" -gt 0 ]; do
