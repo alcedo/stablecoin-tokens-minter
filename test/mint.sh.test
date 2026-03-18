@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+cat > "$TMPDIR/forge" <<'MOCK'
+#!/usr/bin/env bash
+echo "mock forge $*"
+MOCK
+chmod +x "$TMPDIR/forge"
+
+assert_contains() {
+  local haystack="$1"
+  local needle="$2"
+  if [[ "$haystack" != *"$needle"* ]]; then
+    echo "Expected output to contain: $needle" >&2
+    echo "Actual output:" >&2
+    echo "$haystack" >&2
+    exit 1
+  fi
+}
+
+output="$(PATH="$TMPDIR:$PATH" "$REPO_ROOT/mint.sh" --chain anvil)"
+assert_contains "$output" "Chain alias: anvil"
+assert_contains "$output" "Token name: Example Stablecoin"
+assert_contains "$output" "Token symbol: EXUSD"
+assert_contains "$output" "Token decimals: 18"
+assert_contains "$output" "Final owner: address(0)"
+assert_contains "$output" "Recipient count: 0"
+assert_contains "$output" "Total mint amount: 0"
+assert_contains "$output" "Mode: simulation"
+assert_contains "$output" "mock forge script script/DeployAndDistribute.s.sol:DeployAndDistribute --rpc-url http://127.0.0.1:8545"
+
+echo "mint.sh preflight test passed"

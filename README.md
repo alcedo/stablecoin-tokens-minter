@@ -47,6 +47,8 @@ export ETHEREUM_RPC_URL=https://...
 ./mint.sh --chain ethereum --broadcast --confirm-mainnet
 ```
 
+Before invoking Foundry, `mint.sh` now prints a shell-level preflight summary with the selected chain, token metadata, final owner, recipient count, and total mint amount parsed from `script/DeployAndDistribute.s.sol`.
+
 ## Development
 
 ```bash

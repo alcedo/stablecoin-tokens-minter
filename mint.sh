@@ -5,6 +5,7 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 CHAIN_ALIAS=""
 BROADCAST=false
 CONFIRM_MAINNET=false
+SCRIPT_PATH="$SCRIPT_DIR/script/DeployAndDistribute.s.sol"
 
 die() {
   echo "Error: $*" >&2
@@ -12,14 +13,14 @@ die() {
 }
 
 usage() {
-  cat <<'EOF'
+  cat <<'EOF_USAGE'
 Usage: ./mint.sh --chain <alias> [--broadcast] [--confirm-mainnet]
 
 Examples:
   ./mint.sh --chain anvil
   ./mint.sh --chain sepolia --broadcast
   ./mint.sh --chain ethereum --broadcast --confirm-mainnet
-EOF
+EOF_USAGE
 }
 
 resolve_rpc_url() {
@@ -37,6 +38,61 @@ resolve_rpc_url() {
   fi
 
   return 1
+}
+
+load_script_preflight() {
+  if ! SCRIPT_PREFLIGHT="$(python3 - "$SCRIPT_PATH" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+source = path.read_text()
+
+config_match = re.search(
+    r'config\s*=\s*TokenConfig\s*\(\s*\{\s*name:\s*"(?P<name>[^"]*)"\s*,\s*symbol:\s*"(?P<symbol>[^"]*)"\s*,\s*decimals:\s*(?P<decimals>\d+)\s*,\s*finalOwner:\s*(?P<owner>[^}\n]+?)\s*}\s*\)\s*;',
+    source,
+    re.S,
+)
+if not config_match:
+    sys.exit("Unable to parse TokenConfig from script/DeployAndDistribute.s.sol")
+
+recipient_matches = re.findall(
+    r'Recipient\s*\(\s*\{\s*to:\s*(?P<to>[^,]+?)\s*,\s*amount:\s*(?P<amount>[^}\n]+?)\s*}\s*\)',
+    source,
+    re.S,
+)
+
+count = len(recipient_matches)
+total = 0
+for _to, amount_expr in recipient_matches:
+    amount_expr = amount_expr.strip().replace('_', '')
+    ether_match = re.fullmatch(r'(\d+)\s+ether', amount_expr)
+    if ether_match:
+        total += int(ether_match.group(1)) * 10**18
+        continue
+    if re.fullmatch(r'\d+', amount_expr):
+        total += int(amount_expr)
+        continue
+    sys.exit(f"Unable to parse recipient amount expression: {amount_expr}")
+
+print(config_match.group('name'))
+print(config_match.group('symbol'))
+print(config_match.group('decimals'))
+print(config_match.group('owner').strip())
+print(count)
+print(total)
+PY
+)"; then
+    die "Unable to parse token preflight data from $SCRIPT_PATH"
+  fi
+
+  TOKEN_NAME="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '1p')"
+  TOKEN_SYMBOL="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '2p')"
+  TOKEN_DECIMALS="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '3p')"
+  FINAL_OWNER="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '4p')"
+  RECIPIENT_COUNT="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '5p')"
+  TOTAL_MINT_AMOUNT="$(printf '%s\n' "$SCRIPT_PREFLIGHT" | sed -n '6p')"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -70,6 +126,7 @@ done
 resolve_chain "$CHAIN_ALIAS"
 
 RPC_URL="$(resolve_rpc_url)" || die "Set $RPC_URL_ENV_VAR before running for chain '$CHAIN_ALIAS'"
+load_script_preflight
 
 if [ "$BROADCAST" = true ] && [ -z "${PRIVATE_KEY:-}" ]; then
   die "Set PRIVATE_KEY before using --broadcast"
@@ -86,6 +143,13 @@ if [ -n "$EXPLORER_BASE_URL" ]; then
 else
   echo "Explorer: not configured"
 fi
+
+echo "Token name: $TOKEN_NAME"
+echo "Token symbol: $TOKEN_SYMBOL"
+echo "Token decimals: $TOKEN_DECIMALS"
+echo "Final owner: $FINAL_OWNER"
+echo "Recipient count: $RECIPIENT_COUNT"
+echo "Total mint amount: $TOTAL_MINT_AMOUNT"
 
 if [ "$BROADCAST" = true ]; then
   echo "Mode: broadcast"
