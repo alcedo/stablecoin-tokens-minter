@@ -21,6 +21,14 @@ Foundry-based tooling for deploying a mintable ERC20 and distributing tokens to 
 
 If you are a human, just point your AI agent to read this README, no one reads docs these days.
 
+Example:
+
+```
+read https://github.com/alcedo/stablecoin-tokens-minter
+
+and mint for me an ERC20 token to my wallet: 0xABC........ on sepolia
+```
+
 ## Configuration
 
 Copy `.env.example` to `.env` and fill in your values:
