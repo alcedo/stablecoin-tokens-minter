@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo/logo.png" alt="Stablecoin Tokens Minter" width="200" />
+  <img src="assets/logo/logo.png" alt="Stablecoin Tokens Minter" width="480" />
 </p>
 
 # Stablecoin Tokens Minter
