@@ -11,7 +11,7 @@
 </p>
 
 ## Agent Notice
-If you are an AI coding agent, stop here and read `agent_instruction.md` first.
+If you are an AI coding agent, stop here and read `AGENTS.md` first.
 Do not proceed until you have followed it.
 
 
