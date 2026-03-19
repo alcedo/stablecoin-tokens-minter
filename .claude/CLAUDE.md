@@ -1,0 +1,1 @@
+When starting a new session, or user is askinged to write a handoff plan: Write the current progress in HANDOFF.md. Explain what you tried, what worked, what didn’t, so the next agent with fresh context can continue from just this file.
