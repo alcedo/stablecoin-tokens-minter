@@ -80,7 +80,7 @@
   - `--help`
 - Added wrapper-side guardrails:
   - chain alias is required
-  - broadcast requires `PRIVATE_KEY`
+  - broadcast requires `DEPLOYER_KEY`
   - mainnet broadcast requires `--confirm-mainnet`
   - chain RPC URL must exist via env var or built-in default
 - Current wrapper behavior:
@@ -194,7 +194,7 @@ These are the most important differences between the current implementation and 
    - run `./mint.sh --chain anvil`
 
 4. Run a real local broadcast test against Anvil:
-   - export `PRIVATE_KEY`
+   - export `DEPLOYER_KEY`
    - run `./mint.sh --chain anvil --broadcast`
 
 5. Verify:

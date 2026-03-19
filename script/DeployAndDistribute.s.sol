@@ -89,17 +89,13 @@ abstract contract DeployAndDistributeBase is Script {
     function run() external returns (MintableERC20 token) {
         (TokenConfig memory tokenConfig, Recipient[] memory recipients, uint256 totalAmount) = validate();
 
-        uint256 privateKey = vm.envOr("PRIVATE_KEY", uint256(0));
-        address broadcaster = privateKey != 0 ? vm.addr(privateKey) : address(0);
+        uint256 privateKey = _resolveDeployerKey();
+        address broadcaster = vm.addr(privateKey);
 
         _logPreflight(tokenConfig, recipients.length, totalAmount, broadcaster);
 
-        if (privateKey != 0) {
-            vm.startBroadcast(privateKey);
-        } else {
-            vm.startBroadcast();
-        }
-        token = _deployAndDistribute(tokenConfig, recipients, broadcaster != address(0) ? broadcaster : msg.sender, true);
+        vm.startBroadcast(privateKey);
+        token = _deployAndDistribute(tokenConfig, recipients, broadcaster, true);
         vm.stopBroadcast();
 
         console2.log("Deployment complete.");
@@ -135,6 +131,21 @@ abstract contract DeployAndDistributeBase is Script {
         if (tokenConfig.finalOwner != temporaryOwner) {
             token.transferOwnership(tokenConfig.finalOwner);
         }
+    }
+
+    /// @dev Reads DEPLOYER_KEY as either a hex private key (0x…) or a BIP-39 mnemonic.
+    ///      Falls back to private key 1 (Anvil default) when unset.
+    function _resolveDeployerKey() internal view returns (uint256) {
+        string memory raw = vm.envOr("DEPLOYER_KEY", string(""));
+        if (bytes(raw).length == 0) {
+            return 1;
+        }
+        // Hex private key: starts with "0x"
+        if (bytes(raw).length >= 2 && bytes(raw)[0] == "0" && bytes(raw)[1] == "x") {
+            return vm.parseUint(raw);
+        }
+        // Otherwise treat as mnemonic
+        return vm.deriveKey(raw, 0);
     }
 
     function _logPreflight(

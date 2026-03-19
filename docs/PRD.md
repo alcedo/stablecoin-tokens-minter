@@ -23,7 +23,7 @@ Build a greenfield Foundry project that exposes a thin CLI wrapper for deploying
   - Default behavior is dry-run/simulation; only pass `--broadcast` to `forge script` when explicitly requested.
   - Resolve `<alias>` through a sourced shell config such as `/Users/victor/Documents/workspace/AI-General-Workspace/one-shot-erc20-token-test/config/chains.sh`.
   - Each alias entry must set `CHAIN_ID`, `RPC_URL`, `EXPLORER_BASE_URL`, and `IS_MAINNET`.
-  - Require `PRIVATE_KEY` in env for broadcast runs.
+  - Require `DEPLOYER_KEY` in env for broadcast runs.
   - For `IS_MAINNET=true`, refuse broadcast unless `--confirm-mainnet` is also present.
   - Print a preflight summary before invoking Foundry: chain alias, chain ID, token metadata, final owner, recipient count, and total mint amount.
 - Add starter chain aliases in `config/chains.sh` for at least one testnet and one mainnet example so the alias mechanism is exercised end to end.

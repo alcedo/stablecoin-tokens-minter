@@ -70,16 +70,16 @@ assert_contains "$output" "mock forge script script/DeployAndDistribute.s.sol:De
 echo "Test 1 passed: basic simulation"
 
 # ---------------------------------------------------------------------------
-# Test 2: --broadcast requires PRIVATE_KEY
+# Test 2: --broadcast requires DEPLOYER_KEY
 # ---------------------------------------------------------------------------
 
 if broadcast_output="$(PATH="$TMPDIR:$PATH" "$TEST1_DIR/mint.sh" --chain anvil --broadcast 2>&1)"; then
-  echo "FAIL — expected broadcast without PRIVATE_KEY to fail" >&2
+  echo "FAIL — expected broadcast without DEPLOYER_KEY to fail" >&2
   exit 1
 fi
-assert_contains "$broadcast_output" "Set PRIVATE_KEY before using --broadcast"
+assert_contains "$broadcast_output" "Set DEPLOYER_KEY before using --broadcast"
 
-echo "Test 2 passed: broadcast requires PRIVATE_KEY"
+echo "Test 2 passed: broadcast requires DEPLOYER_KEY"
 
 # ---------------------------------------------------------------------------
 # Test 3: missing .env fails with helpful message
@@ -112,7 +112,7 @@ RECIPIENT="uniform absorb deny slow slot wink canvas rifle ill depend size suspe
 RECIPIENT_AMOUNT=1000
 RECIPIENT2="maid physical pair future general awake proof author proof arrive sound dolphin"
 RECIPIENT2_AMOUNT=500
-PRIVATE_KEY=0x75eff23155fe349110fb2d93ad3863e28ce7a0619b3bdd860787991cf665b9e5
+DEPLOYER_KEY=0x75eff23155fe349110fb2d93ad3863e28ce7a0619b3bdd860787991cf665b9e5
 ETHEREUM_RPC_URL=https://fake-rpc.example.com
 ENV
 

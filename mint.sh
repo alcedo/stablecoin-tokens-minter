@@ -96,11 +96,12 @@ done
 . "$SCRIPT_DIR/config/chains.sh"
 resolve_chain "$CHAIN_ALIAS"
 
-RPC_URL="$(resolve_rpc_url)" || die "Set $RPC_URL_ENV_VAR before running for chain '$CHAIN_ALIAS'"
 load_script_preflight
 
-if [ "$BROADCAST" = true ] && [ -z "${PRIVATE_KEY:-}" ]; then
-  die "Set PRIVATE_KEY before using --broadcast"
+RPC_URL="$(resolve_rpc_url)" || die "Set $RPC_URL_ENV_VAR before running for chain '$CHAIN_ALIAS'"
+
+if [ "$BROADCAST" = true ] && [ -z "${DEPLOYER_KEY:-}" ]; then
+  die "Set DEPLOYER_KEY before using --broadcast"
 fi
 
 if [ "$IS_MAINNET" = true ] && [ "$BROADCAST" = true ] && [ "$CONFIRM_MAINNET" != true ]; then

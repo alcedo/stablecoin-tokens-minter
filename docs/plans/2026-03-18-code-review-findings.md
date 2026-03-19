@@ -15,10 +15,10 @@ Code review of the shell wrapper (`mint.sh`), Solidity deploy script, `.env.exam
 - **Problem:** `$(( RECIPIENT_AMOUNT + RECIPIENT2_AMOUNT ))` uses 64-bit signed integer math. ERC-20 wei amounts (e.g. 10^21) exceed 2^63 and silently overflow to garbage values. Example: 1000000000000000000000 + 500000000000000000000 = 4659767778871345152 (wrong).
 - **Fix:** Replace with `TOTAL_MINT_AMOUNT=$(echo "$RECIPIENT_AMOUNT + $RECIPIENT2_AMOUNT" | bc)`.
 
-### 3. [Medium] Simulation mode fails without PRIVATE_KEY
+### 3. [Medium] Simulation mode fails without DEPLOYER_KEY
 - **Files:** `mint.sh` (lines 103-105), `script/DeployAndDistribute.s.sol` (line 92)
-- **Problem:** `mint.sh` only requires `PRIVATE_KEY` when `--broadcast` is set, but `forge script` always executes `run()` which calls `vm.envUint("PRIVATE_KEY")` unconditionally. Simulation mode crashes.
-- **Fix:** Either use `vm.envOr("PRIVATE_KEY", uint256(0))` in Solidity for non-broadcast runs, or require PRIVATE_KEY in all modes in the shell script.
+- **Problem:** `mint.sh` only requires `DEPLOYER_KEY` when `--broadcast` is set, but `forge script` always executes `run()` which calls `vm.envUint("DEPLOYER_KEY")` unconditionally. Simulation mode crashes.
+- **Fix:** Either use `vm.envOr("DEPLOYER_KEY", uint256(0))` in Solidity for non-broadcast runs, or require DEPLOYER_KEY in all modes in the shell script.
 
 ### 4. [Medium] Shell test completely broken
 - **File:** `test/mint.sh.test`

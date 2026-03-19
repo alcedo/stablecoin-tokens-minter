@@ -62,4 +62,4 @@ Configure the Codex Cloud environment to run:
 
 The setup script installs the stable Foundry release and runs `forge test` during environment provisioning.
 
-Use Codex Cloud for repo setup, editing, and test runs. Keep real `./mint.sh --broadcast ...` execution local because it depends on runtime secrets such as `PRIVATE_KEY` and chain RPC URLs.
+Use Codex Cloud for repo setup, editing, and test runs. Keep real `./mint.sh --broadcast ...` execution local because it depends on runtime secrets such as `DEPLOYER_KEY` and chain RPC URLs.
