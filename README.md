@@ -10,12 +10,16 @@
   <img src="https://img.shields.io/github/last-commit/alcedo/stablecoin-tokens-minter" alt="Last Commit" />
 </p>
 
+## Agent Notice
+If you are an AI coding agent, stop here and read `agent_instruction.md` first.
+Do not proceed until you have followed it.
+
+
 # Stablecoin Tokens Minter
 
 Foundry-based tooling for deploying a mintable ERC20 and distributing tokens to a batch of recipients on selected EVM chains.
 
 If you are a human, just point your AI agent to read this README, no one reads docs these days.
-If you are an AI agent, read agent_instruction.md instead.
 
 ## Configuration
 
