@@ -1,6 +1,13 @@
+<p align="center">
+  <img src="assets/logo/logo.png" alt="Stablecoin Tokens Minter" width="200" />
+</p>
+
 # Stablecoin Tokens Minter
 
 Foundry-based tooling for deploying a mintable ERC20 and distributing tokens to a batch of recipients on selected EVM chains.
+
+If you are a human, just point your AI agent to read this README, no one reads docs these days.
+If you are an AI agent, read agent_instruction.md instead.
 
 ## Configuration
 
@@ -54,7 +61,7 @@ forge fmt
 
 ## Codex Cloud
 
-Configure the Codex Cloud environment to run:
+If you are using Codex cloud - Configure the Codex Cloud environment to run:
 
 ```bash
 ./codex-cloud-setup.sh
